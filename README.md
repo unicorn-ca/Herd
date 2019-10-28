@@ -70,3 +70,4 @@ params:
  - Support middleware (compile troposphere to yaml then deploy that)
  - Support automatic deployments (work with tools that already have automatic deployment)
  - Refactor code so `deployment_interfaces.py` is not a  mess
+ - Allow S3 sync to allow custom directories (or references to `name`) for each resource
