@@ -26,7 +26,7 @@ deployments:
       template_parameters: /path/to/parameters.yaml
       tags:
           - Key: tags
-            Value: int a key, value format
+            Value: in a key, value format
 ```
 
 ## TODO
