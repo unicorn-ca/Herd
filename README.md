@@ -36,6 +36,33 @@ deployments:
             Value: in a key, value format
 ```
 
+## Parameters
+The parameter file needs to be defined as either the standard aws format or the key-value pair format.
+
+#### AWS format
+The standard aws format spreads key-pairs into ParameterName, ParameterValue pairs. This can be supported either
+by specifying `format: aws` into the document root:
+```yaml
+format: aws
+params:
+  - ParameterName: some-name
+    ParameterValue: some-value
+```
+
+or by omitting the format/params fields altogether.
+```yaml
+- ParameterName:  some-name
+  ParameterValue: some-value
+```
+
+#### Key-Value format
+The key-value format allows direct associatiton between keys and values.
+```yaml
+format: key-value
+params:
+    some-name: some-value
+```
+
 ## TODO
  - More customization for deployments
  - Introduce dependancy model so we can parallelise deployments

@@ -1,0 +1,4 @@
+format: key-value
+params:
+  - ParameterName:  EnvironmentName
+    ParameterValue: some-name
