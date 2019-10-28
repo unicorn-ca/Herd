@@ -3,13 +3,19 @@ defaults:
 
 deployments:
     - name: basic-deployment
-      stack_name: stack-name
+      stack_name: chen-herd-test
       authentication:
         type: secret
         access_key_id: <redacted>
         access_key: <redacted>
       template_file: example/template.yaml
       template_parameters: example/params.yaml
+      sync:
+          bucket: chen-staging
+          base_key: herd/test1/
+          resources:
+            - example/template.yaml
+            - example/params.yaml
       tags:
           - Key: Project
             Value: test

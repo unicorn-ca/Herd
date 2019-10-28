@@ -22,6 +22,13 @@ deployments:
         access_key_id: access key id of user to deploy with, used by type=secret
         access_key: access key of user to deploy with,       used by type=secret
         token: token to deploy with,                         used by type=token
+      sync:
+        bucket: bucket to upload to
+        base_key: directory path to upload files to
+        resources
+          - list of
+          - resources
+          - to upload
       template_file: /path/to/cfm/template.yaml
       template_parameters: /path/to/parameters.yaml
       tags:

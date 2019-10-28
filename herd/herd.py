@@ -2,11 +2,11 @@ import yaml
 import deployment_interfaces as di
 
 def run_deployments(cfg):
-    deployer = di.Deployer()
-
-    deployer.load_defaults(cfg['defaults'])
     for deployment in cfg['deployments']:
-        deployer.deploy(deployment)
+        deployer = di.Deployer()
+        deployer.load_defaults(cfg['defaults'])
+        stack_id = deployer.deploy(deployment)
+        deployer.wait_for_completion()
 
 if __name__ == '__main__':
     import sys
