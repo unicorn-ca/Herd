@@ -1,0 +1,15 @@
+defaults:
+  region: ap-southeast-2
+
+deployments:
+    - name: basic-deployment
+      stack_name: stack-name
+      authentication:
+        type: secret
+        access_key_id: <redacted>
+        access_key: <redacted>
+      template_file: example/template.yaml
+      template_parameters: example/params.yaml
+      tags:
+          - Key: Project
+            Value: test
