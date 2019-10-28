@@ -25,7 +25,7 @@ deployments:
       sync:
         bucket: bucket to upload to
         base_key: directory path to upload files to
-        resources
+        resources:
           - list of
           - resources
           - to upload
