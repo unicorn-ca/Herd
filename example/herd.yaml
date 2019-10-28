@@ -8,7 +8,7 @@ deployments:
         type: secret
         access_key_id: <redacted>
         access_key: <redacted>
-      template_file: example/template.yaml
+      template_file: sync://template.yaml
       template_parameters: example/params.yaml
       sync:
           bucket: chen-staging

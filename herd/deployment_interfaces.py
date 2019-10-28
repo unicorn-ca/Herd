@@ -51,6 +51,7 @@ class Deployer():
             args['TemplateBody'] = open(job['template_file']).read()
         else:
             args['TemplateURL'] = template_url
+
         return client.create_stack(**args)
 
     def sync_files(self, sync):
@@ -91,8 +92,10 @@ class Deployer():
         tpl_url = None
         if 'sync' in job:
             uploaded = self.sync_files(job['sync'])
-            loc = self._s3_client.get_bucket_location(Bucket=job['sync']['bucket'])['LocationConstraint']
-            tpl_url = f"https://{job['sync']['bucket']}.s3-{loc}.amazonaws.com/{job['sync']['base_key']}{os.path.basename(tpl_f)}"
+            fsrc = tpl_f.split('://')
+            if fsrc[0] == 'sync' and len(fsrc) == 2:
+                loc = self._s3_client.get_bucket_location(Bucket=job['sync']['bucket'])['LocationConstraint']
+                tpl_url = f"https://{job['sync']['bucket']}.s3-{loc}.amazonaws.com/{job['sync']['base_key']}{fsrc[1]}"
 
         self._stack = self.deploy_stack(job, tpl_url)['StackId']
 

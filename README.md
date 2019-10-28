@@ -29,7 +29,7 @@ deployments:
           - list of
           - resources
           - to upload
-      template_file: /path/to/cfm/template.yaml
+      template_file: /path/to/cfm/template.yaml    or    sync://basename_of_resource_in_sync.resources
       template_parameters: /path/to/parameters.yaml
       tags:
           - Key: tags
