@@ -37,7 +37,6 @@ deployments:
 ```
 
 ## TODO
- - Automatically upload to s3 by default
  - More customization for deployments
  - Introduce dependancy model so we can parallelise deployments
  - Progress bar
