@@ -69,3 +69,4 @@ params:
  - Progress bar
  - Support middleware (compile troposphere to yaml then deploy that)
  - Support automatic deployments (work with tools that already have automatic deployment)
+ - Refactor code so `deployment_interfaces.py` is not a  mess
