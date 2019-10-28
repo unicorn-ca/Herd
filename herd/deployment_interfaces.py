@@ -40,7 +40,7 @@ class Deployer():
 
         args = {
             'StackName': job['stack_name'] if 'stack_name' in job else job['name'],
-            'Parameters': yaml.load(open(job['template_parameters']), Loader=yaml.SafeLoader)
+            'Parameters': self.load_params(job['template_parameters'])
                             if 'template_parameters' in job else [],
             'DisableRollback': False,
             'TimeoutInMinutes': 100,
@@ -75,10 +75,12 @@ class Deployer():
         self._synced = keys
         return keys
 
+
     def hide_files(self, sync, keys):
         client = self._s3_client
         for resource in keys:
             client.put_object_acl(ACL='private', Bucket=sync['bucket'], Key=resource)
+
 
     def deploy(self, job):
         name = job['name']
@@ -105,3 +107,30 @@ class Deployer():
         waiter = self._cf_client.get_waiter('stack_update_complete')
         waiter.wait(StackName=self._stack)
         
+    def load_params(self, param_file):
+        params = yaml.load(open(param_file), Loader=yaml.SafeLoader)
+
+        if isinstance(params, list): return params
+        
+        if 'format' not in params:
+            raise Exception('Formatted parameters must include a format')
+
+        fmt = params['format']
+        if fmt == 'aws':
+            return params['params']
+        elif fmt == 'key-value':
+            ret = []
+            for pname, pvalue in params['params'].items():
+                ret.append({
+                    'ParameterKey':   pname,
+                    'ParameterValue': pvalue
+                })
+            print(ret)
+            return ret
+        else:
+            raise Exception(f'Unknown parameter format {fmt}')
+
+
+
+
+

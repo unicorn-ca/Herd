@@ -45,13 +45,13 @@ by specifying `format: aws` into the document root:
 ```yaml
 format: aws
 params:
-  - ParameterName: some-name
+  - ParameterKey:   some-name
     ParameterValue: some-value
 ```
 
 or by omitting the format/params fields altogether.
 ```yaml
-- ParameterName:  some-name
+- ParameterKey:   some-name
   ParameterValue: some-value
 ```
 
@@ -67,6 +67,5 @@ params:
  - More customization for deployments
  - Introduce dependancy model so we can parallelise deployments
  - Progress bar
- - Better parameter/tag format in the herd config
  - Support middleware (compile troposphere to yaml then deploy that)
  - Support automatic deployments (work with tools that already have automatic deployment)
