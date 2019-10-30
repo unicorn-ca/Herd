@@ -64,6 +64,7 @@ params:
 ```
 
 ## TODO
+ - **High Priority**: Change set application instead of stack creation
  - More customization for deployments
  - Introduce dependancy model so we can parallelise deployments
  - Progress bar
