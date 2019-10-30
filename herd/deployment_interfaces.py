@@ -104,7 +104,7 @@ class Deployer():
         return self._stack
 
     def wait_for_completion(self):
-        waiter = self._cf_client.get_waiter('stack_update_complete')
+        waiter = self._cf_client.get_waiter('stack_create_complete')
         waiter.wait(StackName=self._stack)
         
     def load_params(self, param_file):
