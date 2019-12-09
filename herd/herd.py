@@ -8,7 +8,6 @@ def run_deployments(cfg):
         deployer.set_logger(sys.stdout, lambda m,p: m + '\n')
         deployer.load_defaults(cfg['defaults'])
         stack_id = deployer.deploy(deployment)
-        deployer.wait_for_completion()
 
 if __name__ == '__main__':
     import sys

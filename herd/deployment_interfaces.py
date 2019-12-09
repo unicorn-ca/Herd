@@ -1,5 +1,7 @@
 import os
 import yaml
+import time
+import string
 import aws_interact
 
 class logging:
@@ -50,27 +52,76 @@ class Deployer():
 
         return self._boto_handle
 
+    def make_cs_name(self):
+        # Time based string generator
+        charset = string.ascii_letters + string.digits
+        def int_to_id(n):
+            return (
+                '0' if n == 0 else
+                int_to_id(n // len(charset)).lstrip('0') + charset[n%len(charset)]
+            )
+
+        return int_to_id(int(time.time() * 10**6))
+
+    def make_change_set(self, cs_args):
+        def list_stacks(client):
+            resp = client.list_stacks()
+            while True:
+                next_token = resp['NextToken'] if 'NextToken' in resp else None
+                yield from (stack['StackName'] for stack in resp['StackSummaries'] if stack['StackStatus'] not in ['DELETE_IN_PROGRESS', 'DELETE_COMPLETE'])
+
+                if next_token is None: break
+                resp = client.list_stacks(NextToken=next_token)
+
+        action = 'CREATE'
+        for stack in list_stacks(self._cf_client):
+            if cs_args['StackName'] == stack:
+                action = 'UPDATE'
+                break
+
+        cs_args['ChangeSetType'] = action
+
+        self.log(f'Making {action} change set', 1)
+        cs = self._cf_client.create_change_set(**cs_args)
+        self._cf_client.get_waiter('change_set_create_complete').wait(
+            ChangeSetName=cs['Id'],
+            WaiterConfig={'Delay': 10}
+        )
+        return cs, action
+
+    def deploy_change_set(self, cs):
+        cs_desc = self._cf_client.describe_change_set(ChangeSetName=cs['Id'])
+        if cs_desc['ExecutionStatus'] != 'AVAILABLE':
+            self.log('Change set is not in AVAILABLE state', 1)
+            return {'StackId': cs_desc['StackId']}
+
+        self.log('Deploying changeset', 2)
+        self._cf_client.execute_change_set(ChangeSetName=cs['Id'])
+        return {'StackId': cs_desc['StackId']}
+
     def deploy_stack(self, job, template_url=None):
         client = self._boto_handle.client('cloudformation', region=self._defaults['region'])
         self._cf_client = client
 
+        changeset_name = self.make_cs_name()
         # TODO: adapt this to use create/execute changeset
         args = {
             'StackName': job['stack_name'] if 'stack_name' in job else job['name'],
             'Parameters': self.load_params(job['template_parameters'])
                             if 'template_parameters' in job else [],
-            'DisableRollback': False,
-            'TimeoutInMinutes': 100,
             'Capabilities': job['capabilities'] if 'capabilities' in job else [],
             'Tags': job['tags'] if 'tags' in job else []
         }
+        changeset_name = f'{args["StackName"]}-{changeset_name}-CS'
+        args['ChangeSetName'] = changeset_name
         if template_url is None:
             args['TemplateBody'] = open(job['template_file']).read()
         else:
             args['TemplateURL'] = template_url
 
-        self.log('Creating stack', 1)
-        return client.create_stack(**args)
+        self.log(f'Creating changeset [{changeset_name}]', 2)
+        changeset, action = self.make_change_set(args)
+        return self.deploy_change_set(changeset), action
 
     def sync_files(self, sync):
         client = self._boto_handle.client('s3')
@@ -123,13 +174,19 @@ class Deployer():
                 loc = self._s3_client.get_bucket_location(Bucket=job['sync']['bucket'])['LocationConstraint']
                 tpl_url = f"https://{job['sync']['bucket']}.s3-{loc}.amazonaws.com/{job['sync']['base_key']}{fsrc[1]}"
 
-        self._stack = self.deploy_stack(job, tpl_url)['StackId']
+        self._stack, action = self.deploy_stack(job, tpl_url)
+        self._stack = self._stack['StackId']
+        try:
+            self.wait_for_completion(action.lower())
+        except:
+            self.log('Failed to execute deployment, check cloudformation for more details', 0);
 
+        self.log(f'Finished deploying stack [{self._stack}]', 0)
         return self._stack
 
-    def wait_for_completion(self):
-        waiter = self._cf_client.get_waiter('stack_create_complete')
-        waiter.wait(StackName=self._stack)
+    def wait_for_completion(self, verb='create'):
+        waiter = self._cf_client.get_waiter(f'stack_{verb}_complete')
+        waiter.wait(StackName=self._stack, WaiterConfig={'Delay': 10, 'MaxAttempts': 360})
 
     def load_params(self, param_file):
         params = yaml.load(open(param_file), Loader=yaml.SafeLoader)
