@@ -18,11 +18,24 @@ class Deployer():
         self._defaults = {
             'region': 'ap-southeast-1'
         }
-        self._boto_handle = None
-        self._stack       = None
-        self._cf_client   = None
-        self._s3_client   = None
-        self._synced      = []
+        self._boto_handle    = None
+        self._stack          = None
+        self._cf_client      = None
+        self._s3_client      = None
+        self._synced         = []
+        self._log_file       = None
+        self._log_middleware = None
+
+    def set_logger(self, output, middleware=lambda x,c:x):
+        self._log_file = output
+        self._log_middleware = middleware
+
+    def log(self, message, priority=0):
+        if self._log_file is None: return
+
+        content = self._log_middleware(message, priority)
+        if content is not None:
+            self._log_file.write(content)
 
     def load_defaults(self, defaults={}):
         for cfg, val in defaults.items():
@@ -30,7 +43,10 @@ class Deployer():
 
     def auth_boto(self, auth):
         self._boto_handle = aws_interact.Session()
-        self._boto_handle.authenticate(auth)
+        try:
+            self._boto_handle.authenticate(auth)
+        except:
+            return None
 
         return self._boto_handle
 
@@ -38,6 +54,7 @@ class Deployer():
         client = self._boto_handle.client('cloudformation', region=self._defaults['region'])
         self._cf_client = client
 
+        # TODO: adapt this to use create/execute changeset
         args = {
             'StackName': job['stack_name'] if 'stack_name' in job else job['name'],
             'Parameters': self.load_params(job['template_parameters'])
@@ -52,6 +69,7 @@ class Deployer():
         else:
             args['TemplateURL'] = template_url
 
+        self.log('Creating stack', 1)
         return client.create_stack(**args)
 
     def sync_files(self, sync):
@@ -65,7 +83,7 @@ class Deployer():
 
             key = sync['base_key'] + os.path.basename(resource)
             keys.append(key)
-            logging.log(f'Uploading [{resource}] to [s3://{sync["bucket"] +"/"+ key}]')
+            self.log(f'Uploading [{resource}] to [s3://{sync["bucket"] +"/"+ key}]', 2)
             client.upload_file(resource, sync['bucket'], key, ExtraArgs={'ACL':'aws-exec-read'})
 
         waiter = client.get_waiter('object_exists')
@@ -87,13 +105,19 @@ class Deployer():
         tpl_f = job['template_file']
         param_file = job['template_parameters'] if 'template_parameters' in job else None
 
-        logging.log(f'Deploying [{name}] from {tpl_f} using parameters {param_file}')
+        self.log(f'Deploying [{name}] from {tpl_f} using parameters {param_file}', 1)
 
-        self.auth_boto(job['authentication'])
+        if self.auth_boto(job['authentication']) is None:
+            self.log('Failed to authenticate', 0)
+            return None
+        else:
+            self.log(f'Successfully authenticated', 1)
 
         tpl_url = None
         if 'sync' in job:
             uploaded = self.sync_files(job['sync'])
+            self.log('Successfully uploaded all artifacts', 1)
+
             fsrc = tpl_f.split('://')
             if fsrc[0] == 'sync' and len(fsrc) == 2:
                 loc = self._s3_client.get_bucket_location(Bucket=job['sync']['bucket'])['LocationConstraint']
@@ -106,12 +130,12 @@ class Deployer():
     def wait_for_completion(self):
         waiter = self._cf_client.get_waiter('stack_create_complete')
         waiter.wait(StackName=self._stack)
-        
+
     def load_params(self, param_file):
         params = yaml.load(open(param_file), Loader=yaml.SafeLoader)
 
         if isinstance(params, list): return params
-        
+
         if 'format' not in params:
             raise Exception('Formatted parameters must include a format')
 
@@ -125,7 +149,6 @@ class Deployer():
                     'ParameterKey':   pname,
                     'ParameterValue': pvalue
                 })
-            print(ret)
             return ret
         else:
             raise Exception(f'Unknown parameter format {fmt}')
