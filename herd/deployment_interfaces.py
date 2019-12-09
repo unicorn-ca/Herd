@@ -127,7 +127,7 @@ class Deployer():
         changeset, action = self.make_change_set(args)
         if changeset is None:
             self.log(f'Failed to create changeset [{changeset_name}]', 0)
-            return {'StackId': None}
+            return {'StackId': None}, action
 
         return self.deploy_change_set(changeset), action
 
