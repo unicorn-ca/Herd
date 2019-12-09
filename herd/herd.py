@@ -1,6 +1,6 @@
 import sys
 import yaml
-import deployment_interfaces as di
+from . import deployment_interfaces as di
 
 def run_deployments(cfg):
     for deployment in cfg['deployments']:

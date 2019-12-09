@@ -2,7 +2,7 @@ import os
 import yaml
 import time
 import string
-import aws_interact
+from . import aws_interact
 
 class logging:
     @staticmethod
