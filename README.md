@@ -4,7 +4,7 @@ Herd is a tool to automate cross-account cloudformation deployments
 
 ## Usage
 ```sh
-$ python3 herd.py path/to/config.yaml
+$ python3 -m herd.herd path/to/config.yaml
 ```
 
 ## Configuration
