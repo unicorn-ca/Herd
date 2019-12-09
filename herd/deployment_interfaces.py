@@ -83,10 +83,13 @@ class Deployer():
 
         self.log(f'Making {action} change set', 1)
         cs = self._cf_client.create_change_set(**cs_args)
-        self._cf_client.get_waiter('change_set_create_complete').wait(
-            ChangeSetName=cs['Id'],
-            WaiterConfig={'Delay': 10}
-        )
+        try:
+            self._cf_client.get_waiter('change_set_create_complete').wait(
+                ChangeSetName=cs['Id'],
+                WaiterConfig={'Delay': 10}
+            )
+        except boto3.botocore.exceptions.botocore.WaiterError:
+            return None, action
         return cs, action
 
     def deploy_change_set(self, cs):
@@ -121,6 +124,10 @@ class Deployer():
 
         self.log(f'Creating changeset [{changeset_name}]', 2)
         changeset, action = self.make_change_set(args)
+        if changeset is None:
+            self.log(f'Failed to create changeset [{changeset_name}]', 0)
+            return {'StackId': None}
+
         return self.deploy_change_set(changeset), action
 
     def sync_files(self, sync):
@@ -176,6 +183,10 @@ class Deployer():
 
         self._stack, action = self.deploy_stack(job, tpl_url)
         self._stack = self._stack['StackId']
+        if self._stack is None:
+            self.log(f'Failed to deploy stack', 0)
+            return None
+
         try:
             self.wait_for_completion(action.lower())
         except:
