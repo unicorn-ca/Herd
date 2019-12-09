@@ -5,7 +5,7 @@ from . import deployment_interfaces as di
 def run_deployments(cfg):
     for deployment in cfg['deployments']:
         deployer = di.Deployer()
-        deployer.set_logger(sys.stdout, lambda m,p: m + '\n')
+        deployer.set_logger(sys.stdout, lambda m,p: f'[{p}] {m}\n')
         deployer.load_defaults(cfg['defaults'])
         stack_id = deployer.deploy(deployment)
 

@@ -82,7 +82,7 @@ class Deployer():
 
         cs_args['ChangeSetType'] = action
 
-        self.log(f'Making {action} change set', 1)
+        self.log(f'Making {action} change set', 'LOG')
         cs = self._cf_client.create_change_set(**cs_args)
         try:
             self._cf_client.get_waiter('change_set_create_complete').wait(
@@ -96,10 +96,10 @@ class Deployer():
     def deploy_change_set(self, cs):
         cs_desc = self._cf_client.describe_change_set(ChangeSetName=cs['Id'])
         if cs_desc['ExecutionStatus'] != 'AVAILABLE':
-            self.log('Change set is not in AVAILABLE state', 1)
+            self.log('Change set is not in AVAILABLE state', 'ERROR')
             return {'StackId': cs_desc['StackId']}
 
-        self.log('Deploying changeset', 2)
+        self.log('Deploying changeset', 'LOG')
         self._cf_client.execute_change_set(ChangeSetName=cs['Id'])
         return {'StackId': cs_desc['StackId']}
 
@@ -123,10 +123,10 @@ class Deployer():
         else:
             args['TemplateURL'] = template_url
 
-        self.log(f'Creating changeset [{changeset_name}]', 2)
+        self.log(f'Creating changeset [{changeset_name}]', 'LOG')
         changeset, action = self.make_change_set(args)
         if changeset is None:
-            self.log(f'Failed to create changeset [{changeset_name}]', 0)
+            self.log(f'Failed to create changeset [{changeset_name}]', 'ERROR')
             return {'StackId': None}, action
 
         return self.deploy_change_set(changeset), action
@@ -142,7 +142,7 @@ class Deployer():
 
             key = sync['base_key'] + os.path.basename(resource)
             keys.append(key)
-            self.log(f'Uploading [{resource}] to [s3://{sync["bucket"] +"/"+ key}]', 2)
+            self.log(f'Uploading [{resource}] to [s3://{sync["bucket"] +"/"+ key}]', 'INFO')
             client.upload_file(resource, sync['bucket'], key, ExtraArgs={'ACL':'aws-exec-read'})
 
         waiter = client.get_waiter('object_exists')
@@ -164,18 +164,19 @@ class Deployer():
         tpl_f = job['template_file']
         param_file = job['template_parameters'] if 'template_parameters' in job else None
 
-        self.log(f'Deploying [{name}] from {tpl_f} using parameters {param_file}', 1)
+        self.log(f'Deploying [{name}]', 'LOG')
+        self.log(f'Template file: {tpl_f}, parameters {param_file}', 'INFO')
 
         if self.auth_boto(job['authentication']) is None:
-            self.log('Failed to authenticate', 0)
+            self.log('Failed to authenticate', 'ERROR')
             return None
         else:
-            self.log(f'Successfully authenticated', 1)
+            self.log(f'Successfully authenticated', 'LOG')
 
         tpl_url = None
         if 'sync' in job:
             uploaded = self.sync_files(job['sync'])
-            self.log('Successfully uploaded all artifacts', 1)
+            self.log('Successfully uploaded all artifacts', 'LOG')
 
             fsrc = tpl_f.split('://')
             if fsrc[0] == 'sync' and len(fsrc) == 2:
@@ -185,15 +186,15 @@ class Deployer():
         self._stack, action = self.deploy_stack(job, tpl_url)
         self._stack = self._stack['StackId']
         if self._stack is None:
-            self.log(f'Failed to deploy stack', 0)
+            self.log(f'Failed to deploy stack', 'ERROR')
             return None
 
         try:
             self.wait_for_completion(action.lower())
         except:
-            self.log('Failed to execute deployment, check cloudformation for more details', 0);
+            self.log('Failed to execute deployment, check cloudformation for more details', 'ERROR');
 
-        self.log(f'Finished deploying stack [{self._stack}]', 0)
+        self.log(f'Finished deploying stack [{self._stack}]', 'LOG')
         return self._stack
 
     def wait_for_completion(self, verb='create'):
