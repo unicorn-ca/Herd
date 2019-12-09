@@ -1,7 +1,7 @@
 import os
 import yaml
 import time
-from boto3.botocore.exceptions import botocore as bcore_exceptions
+import boto3
 import string
 from . import aws_interact
 
@@ -89,7 +89,7 @@ class Deployer():
                 ChangeSetName=cs['Id'],
                 WaiterConfig={'Delay': 10}
             )
-        except bcore_exceptions.WaiterError:
+        except boto3.exceptions.botocore.exceptions.WaiterError:
             return None, action
         return cs, action
 
