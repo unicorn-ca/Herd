@@ -193,6 +193,7 @@ class Deployer():
             self.wait_for_completion(action.lower())
         except:
             self.log('Failed to execute deployment, check cloudformation for more details', 'ERROR');
+            return None
 
         self.log(f'Finished deploying stack [{self._stack}]', 'LOG')
         return self._stack
